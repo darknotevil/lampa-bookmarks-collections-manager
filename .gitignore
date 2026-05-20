@@ -1,0 +1,34 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+venv/
+.venv/
+env/
+bin/
+lib/
+include/
+
+# Environment variables / Secrets
+.env
+
+# Distribution / Build
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+
+# IDE Specific (optional, e.g., PyCharm or VS Code)
+.idea/
+.vscode/
+
+config/account.json

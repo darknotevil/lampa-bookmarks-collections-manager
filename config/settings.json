@@ -1,0 +1,9 @@
+{
+    "domain": "cub.rip",
+    "protocol": "https",
+    "api_base": "/api/",
+    "collections_api_base": "/api/collections/",
+    "tmdb_proxy": "tmdb.cub.rip",
+    "timeout": 8000,
+    "account": null
+}
