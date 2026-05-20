@@ -16,10 +16,15 @@ pip install -r requirements.txt
 ### 1. Login
 
 **Используя код девайса:**
+
+https://cub.rip/add
+
 ```bash
 python examples/login.py --code 123456
 ```
 
+Появится файл config/account.json
+ 
 ### 2. List Collections
 
 ```bash
@@ -41,14 +46,14 @@ python examples/create_collection.py --name "My Movies"
 
 ### 4. Добавить фильм в избранное/коллекцию
 
-Ищет по всем типам контента. Умеет вырезать слова фильм,сериал,tv show,movie и т.д.
+Ищет по всем типам контента. Умеет вырезать слова фильм,сериал,tv show,movie и т.д. Умеет выделять год.
 По умолчанию добавляет в избранное. При указании collecion-id - в коллекцию.
 
 ```bash
-# Search and add (adds first result)
-python examples/add_items.py --collection-id 2948 --search "The Devil Wears Prada"
+# Найти и добавить (автоматически выбирает первый результат)
+python examples/add_items.py--search "The Devil Wears Prada"
 
-# Интерактивный режим с выбором
+# Интерактивный режим с выбором (есть возможность выбрать любой из поиска)
 python examples/add_items.py --search "смешарики" -i
 
 # Add by TMDB ID
