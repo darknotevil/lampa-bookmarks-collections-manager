@@ -1,4 +1,4 @@
-# Lampa Parser
+# Lampa bookmarks manager
 
 Утилита для добавления в коллекции или закладки фильмов/сериалов/аниме Lampa mx c синхронизацией cub.rip с помощью API.
 
