@@ -2,12 +2,13 @@
 
 Утилита для добавления в коллекции или закладки фильмов/сериалов/аниме Lampa mx c синхронизацией cub.rip с помощью API.
 
-
 Поддерживает авторизацию, создание коллекции, поиск и добавление фильмов/сериалов/аниме по названию или TMDB ID в коллекцию или избранное.
 
 Поддерживает интерактивный режим для выбора нужного фильма.
 
 Полностью навайбкожен для себя. Дополнения и изменения приветствуются.
+
+Спроектирован для использования в LLM. skill.md и agent_tool.py прилагается.
 
 
 ```bash
@@ -172,12 +173,15 @@ lampa-parser/
 │   ├── client.py           # Main API client
 │   ├── auth.py             # Authentication module
 │   ├── models.py           # Pydantic data models
+│   ├── search.py           # Shared search/card logic + result cache
 │   └── utils.py            # Utility functions
 ├── examples/
 │   ├── login.py              # Login example
 │   ├── list_collections.py   # List collections example
 │   ├── create_collection.py  # Create collection example
-│   └── add_items.py          # Add items to collection example
+│   ├── add_items.py          # Add items (interactive, human-facing)
+│   ├── agent_tool.py         # Add items (JSON output, for LLM agents)
+│   └── skill.md              # Agent skill describing the agent_tool workflow
 └── tests/
     ├── test_auth.py
     └── test_collections.py

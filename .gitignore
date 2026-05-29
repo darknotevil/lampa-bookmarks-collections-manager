@@ -32,3 +32,4 @@ wheels/
 .vscode/
 
 config/account.json
+config/search_cache.json
