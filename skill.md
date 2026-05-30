@@ -16,9 +16,10 @@ You never have to copy card data around.
 
 **Working directory:** `lampa-bookmarks-collections-manager`
 
-**Commands:** `search`, `add`, `list-collections`, `create-collection`,
-`bulk-add`. For more than a handful of titles, prefer **`bulk-add`** (one pass,
-one JSON report) over looping `search`+`add` — see *Bulk Workflow* below.
+**Commands:** `search`, `add`, `remove`, `list-collections`,
+`create-collection`, `bulk-add`. For more than a handful of titles, prefer
+**`bulk-add`** (one pass, one JSON report) over looping `search`+`add` — see
+*Bulk Workflow* below.
 
 ## Two-Step Workflow
 
@@ -105,6 +106,25 @@ with that name already exists, you get its id with `"created": false`. Use the
 returned `id` as `--collection-id` when adding.
 
 
+## Removing from a Collection
+
+Remove a movie/show from a specific collection by TMDB id. The media type comes
+from the search cache (run `search` first), or pass `--type` as a fallback.
+
+```bash
+cd lampa-bookmarks-collections-manager && uv run examples/agent_tool.py remove --tmdb-id <ID> --collection-id <CID>
+```
+
+**Output `status` field — removing is idempotent:**
+- `"removed"` — the item was removed (`success: true`)
+- `"not_found"` — it wasn't in the collection (`success: true`, exit 0). This is
+  **not an error** — do NOT retry or "diagnose" it.
+- `"error"` — a real failure (`success: false`, exit 1); `error` explains why.
+
+`--collection-id` is **required** — `remove` only removes from a collection (this
+is the `collections/remove-card` endpoint). Removing a plain bookmark/favorite is
+a different operation (`bookmarks/remove`) and is not exposed here.
+
 ### Classifying anime / cartoon / movie
 
 When the source doesn't label the type, decide with:
@@ -174,5 +194,7 @@ Add "Сексуальная тварь 2000" to bookmarks:
 - **NEVER** invent or guess a TMDB id — use ONLY the `id` values from the `results` array
 - **Always** include the year in the search query when known (e.g. `"Фукусима 2020"`)
 - `status: "already_exists"` is **success** — never retry or re-diagnose a duplicate
+- `status: "not_found"` from `remove` is **success** (item wasn't there) — don't retry
 - Use `create-collection --name` (idempotent) to get a collection id
 - If no collection is specified, add to bookmarks (omit `--collection-id`)
+- `remove` needs `--collection-id` and removes only from that collection

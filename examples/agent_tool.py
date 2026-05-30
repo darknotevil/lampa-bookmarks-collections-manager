@@ -19,6 +19,9 @@ Usage:
     # Add by TMDB id to a specific collection
     uv run examples/agent_tool.py add --tmdb-id 315064 --collection-id 2948
 
+    # Remove by TMDB id from a specific collection
+    uv run examples/agent_tool.py remove --tmdb-id 315064 --collection-id 2948
+
     # Override the cached type (only needed if you skipped search)
     uv run examples/agent_tool.py add --tmdb-id 315064 --type movie
 
@@ -41,6 +44,7 @@ from src.search import (
     get_cached_card,
     get_media_type,
     normalize_result,
+    remove_with_dedup,
     save_search_cache,
     search_and_get_id,
     search_titles,
@@ -113,6 +117,39 @@ def cmd_add(args):
         "tmdb_id": tmdb_id,
         "media_type": media_type,
         "target": target,
+    }
+    if error:
+        result["error"] = error
+    _print(result)
+    if status == "error":
+        sys.exit(1)
+
+
+def cmd_remove(args):
+    """Remove subcommand — removes an item by TMDB id from a collection.
+
+    Like `add`, the media type is recovered from the search cache, so a prior
+    `search` is enough; `--type` is only needed as a fallback. Removing an item
+    that isn't in the collection is idempotent (`status: "not_found"`).
+    """
+    client = LampaClient(domain=args.domain)
+    _require_auth(client)
+
+    tmdb_id = str(args.tmdb_id)
+    card_data = get_cached_card(tmdb_id)
+    media_type = args.type or (get_media_type(card_data) if card_data else None) or "movie"
+
+    status, error = remove_with_dedup(
+        client, tmdb_id, media_type, args.collection_id
+    )
+
+    result = {
+        # a card that wasn't there is an idempotent success, not a failure
+        "success": status in ("removed", "not_found"),
+        "status": status,
+        "tmdb_id": tmdb_id,
+        "media_type": media_type,
+        "collection_id": args.collection_id,
     }
     if error:
         result["error"] = error
@@ -294,6 +331,15 @@ def main():
     add_parser.add_argument('--collection-id', type=str, default=None,
                             help='Collection id (omit for bookmarks)')
     add_parser.set_defaults(func=cmd_add)
+
+    # remove
+    remove_parser = subparsers.add_parser('remove', help='Remove item by TMDB id from a collection')
+    remove_parser.add_argument('--tmdb-id', type=str, required=True, help='TMDB id (from search results)')
+    remove_parser.add_argument('--collection-id', type=str, required=True,
+                               help='Collection id to remove the item from')
+    remove_parser.add_argument('--type', type=str, default=None, choices=['movie', 'tv'],
+                               help='Media type override (defaults to the cached type)')
+    remove_parser.set_defaults(func=cmd_remove)
 
     # list-collections
     lc_parser = subparsers.add_parser('list-collections', help='List user collections')
