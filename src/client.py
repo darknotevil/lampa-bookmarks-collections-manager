@@ -438,6 +438,51 @@ class LampaClient:
             duration=response.get('duration')
         )
 
+    def remove_card_from_collection(
+        self,
+        collection_id: str,
+        tmdb_id: str,
+        media_type: str = "movie"
+    ) -> AddItemResponse:
+        """
+        Remove a movie or TV show from an existing collection.
+
+        Endpoint: POST /api/collections/remove-card
+        Content-Type: application/x-www-form-urlencoded
+
+        Args:
+            collection_id: CUB Collection ID
+            tmdb_id: TMDB ID of the movie or TV show to remove
+            media_type: Type of media — 'movie' or 'tv' (default: 'movie')
+
+        Returns:
+            AddItemResponse with success status
+
+        Raises:
+            RuntimeError: If not authenticated
+            ValueError: If media_type is invalid
+        """
+        if not self.is_authenticated():
+            raise RuntimeError("Not authenticated.")
+
+        if media_type not in ('movie', 'tv'):
+            raise ValueError(f"Invalid media_type: '{media_type}'. Must be 'movie' or 'tv'.")
+
+        response = self._form_request(
+            'POST',
+            self._get_collections_url('remove-card'),
+            data={
+                'id': collection_id,
+                'card_id': tmdb_id,
+                'card_type': media_type,
+            }
+        )
+
+        return AddItemResponse(
+            secuses=response.get('secuses', False),
+            duration=response.get('duration')
+        )
+
     # ============================================
     # Bookmarks Methods
     # ============================================

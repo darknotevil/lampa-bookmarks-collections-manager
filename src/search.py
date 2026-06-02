@@ -281,3 +281,38 @@ def add_with_dedup(
         return "error", str(e)
     except Exception as e:  # network errors, validation, etc.
         return "error", str(e)
+
+
+def remove_with_dedup(
+    client,
+    tmdb_id: str,
+    media_type: str,
+    collection_id: str,
+) -> Tuple[str, Optional[str]]:
+    """Remove an item from a collection, treating "not present" as success.
+
+    Mirrors :func:`add_with_dedup`. A card that isn't in the collection is
+    answered by the server with an error (HTTP 500 / ``secuses:false``); we map
+    that to the idempotent ``"not_found"`` status so re-runs don't fail.
+
+    Returns ``(status, error)`` where status is one of ``"removed"``,
+    ``"not_found"`` or ``"error"`` (with ``error`` set only for the last).
+    """
+    try:
+        response = client.remove_card_from_collection(
+            collection_id=collection_id,
+            tmdb_id=tmdb_id,
+            media_type=media_type,
+        )
+
+        if bool(response.secuses):
+            return "removed", None
+        return "not_found", None
+    except requests.exceptions.HTTPError as e:
+        status_code = getattr(e.response, "status_code", None)
+        if status_code == 500:
+            # Removing an item that isn't there comes back as a 500.
+            return "not_found", None
+        return "error", str(e)
+    except Exception as e:  # network errors, validation, etc.
+        return "error", str(e)
