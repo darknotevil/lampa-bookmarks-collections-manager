@@ -31,5 +31,5 @@ wheels/
 .idea/
 .vscode/
 
-config/account.json
-config/search_cache.json
+# Agent scaffold — local-only session summaries
+.agent/sessions/

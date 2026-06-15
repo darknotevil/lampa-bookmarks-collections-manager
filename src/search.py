@@ -7,11 +7,12 @@ the agent JSON CLI (``examples/agent_tool.py``) build on top of it, so the
 multi-source search, year matching and card-data shaping live in exactly
 one place.
 
-It also keeps a tiny on-disk cache (``config/search_cache.json``) that maps
-a TMDB id to the full "card data" produced by the last search. That lets the
-``add`` step recover the card data by id alone — callers never have to pass
-the bulky card JSON (poster paths, ratings, …) back in, which keeps agent
-token usage low and avoids a TMDB re-fetch that can 404 for some ids.
+It also keeps a tiny on-disk cache
+(``$XDG_CACHE_HOME/lampa-bookmarks/search_cache.json``) that maps a TMDB id to
+the full "card data" produced by the last search. That lets the ``add`` step
+recover the card data by id alone — callers never have to pass the bulky card
+JSON (poster paths, ratings, …) back in, which keeps agent token usage low and
+avoids a TMDB re-fetch that can 404 for some ids.
 """
 
 import json
@@ -19,9 +20,9 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 
-from .utils import PROJECT_ROOT, parse_search_query
+from .utils import CACHE_DIR, parse_search_query
 
-SEARCH_CACHE_PATH = PROJECT_ROOT / "config" / "search_cache.json"
+SEARCH_CACHE_PATH = CACHE_DIR / "search_cache.json"
 
 
 # ============================================

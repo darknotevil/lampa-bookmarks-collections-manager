@@ -8,7 +8,7 @@
 
 Полностью навайбкожен для себя. Дополнения и изменения приветствуются.
 
-Спроектирован для использования в LLM. skill.md и agent_tool.py прилагается.
+Спроектирован для использования в LLM. `.agent/skills/add-to-lampa.md` и `examples/agent_tool.py` прилагаются.
 
 
 ```bash
@@ -24,7 +24,7 @@ https://cub.rip/add
 python examples/login.py --code 123456
 ```
 
-Появится файл config/account.json
+Появится файл `$XDG_STATE_HOME/lampa-bookmarks/account.json` (по умолчанию `~/.local/state/lampa-bookmarks/account.json`, права 0600).
  
 ### 2. List Collections
 
@@ -161,13 +161,18 @@ results = client.search_tmdb(query='Inception')
 ## Project Structure
 
 ```
-lampa-parser/
-├── memory_bank.md          # Project knowledge base
+lampa-bookmarks-collections-manager/
+├── AGENTS.md               # Routing entry point for AI agents
+├── CLAUDE.md               # @AGENTS.md (Claude Code shim)
 ├── README.md               # This file
 ├── requirements.txt        # Python dependencies
-├── config/
-│   ├── settings.json       # Configuration
-│   └── account.json        # Saved account (auto-generated)
+├── .agent/
+│   ├── memory-bank/        # Architecture, tech stack, progress
+│   ├── skills/
+│   │   └── add-to-lampa.md # Agent skill describing the agent_tool workflow
+│   ├── notes/              # Gotchas / patterns
+│   ├── resources/          # Shared templates
+│   └── sessions/           # Per-session summaries (gitignored)
 ├── src/
 │   ├── __init__.py         # Package exports
 │   ├── client.py           # Main API client
@@ -181,7 +186,7 @@ lampa-parser/
 │   ├── create_collection.py  # Create collection example
 │   ├── add_items.py          # Add items (interactive, human-facing)
 │   ├── agent_tool.py         # Add items (JSON output, for LLM agents)
-│   └── skill.md              # Agent skill describing the agent_tool workflow
+│   └── bulk_add_movies.py    # Bulk-add helper
 └── tests/
     ├── test_auth.py
     └── test_collections.py
@@ -229,7 +234,15 @@ lampa-parser/
 
 ## Configuration
 
-Edit `config/settings.json`:
+Files live under XDG base directories (override via env vars):
+
+| File | Default path | Purpose |
+|---|---|---|
+| `settings.json` | `$XDG_CONFIG_HOME/lampa-bookmarks/` (`~/.config/lampa-bookmarks/`) | Domain / protocol / timeout |
+| `account.json` | `$XDG_STATE_HOME/lampa-bookmarks/` (`~/.local/state/lampa-bookmarks/`) | Saved token + profile, 0600 perms |
+| `search_cache.json` | `$XDG_CACHE_HOME/lampa-bookmarks/` (`~/.cache/lampa-bookmarks/`) | Search result cache (safe to delete) |
+
+Example `settings.json`:
 
 ```json
 {

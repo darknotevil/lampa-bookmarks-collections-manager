@@ -9,10 +9,19 @@ from typing import Optional, Tuple
 from pathlib import Path
 
 
-# Project root directory
-PROJECT_ROOT = Path(__file__).parent.parent
-CONFIG_PATH = PROJECT_ROOT / "config" / "settings.json"
-ACCOUNT_PATH = PROJECT_ROOT / "config" / "account.json"
+APP_NAME = "lampa-bookmarks"
+
+
+def _xdg(var: str, fallback: str) -> Path:
+    return Path(os.environ.get(var) or Path.home() / fallback) / APP_NAME
+
+
+CONFIG_DIR = _xdg("XDG_CONFIG_HOME", ".config")
+CACHE_DIR = _xdg("XDG_CACHE_HOME", ".cache")
+STATE_DIR = _xdg("XDG_STATE_HOME", ".local/state")
+
+CONFIG_PATH = CONFIG_DIR / "settings.json"
+ACCOUNT_PATH = STATE_DIR / "account.json"
 
 
 def load_config(path: Optional[str] = None) -> dict:
@@ -44,9 +53,10 @@ def load_account(path: Optional[str] = None) -> Optional[dict]:
 def save_account(account_data: dict, path: Optional[str] = None) -> None:
     """Save account data for persistent sessions."""
     account_path = Path(path) if path else ACCOUNT_PATH
-    account_path.parent.mkdir(parents=True, exist_ok=True)
+    account_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     with open(account_path, 'w', encoding='utf-8') as f:
         json.dump(account_data, f, indent=4, ensure_ascii=False)
+    os.chmod(account_path, 0o600)
 
 
 def clear_account(path: Optional[str] = None) -> None:
