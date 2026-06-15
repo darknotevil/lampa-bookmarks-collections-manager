@@ -11,6 +11,7 @@
 Спроектирован для использования в LLM. `.agent/skills/add-to-lampa.md` и `examples/agent_tool.py` прилагаются.
 
 
+Рекомендуется использовать с плагином collections.js который переопределяет стандартное поведение коллекций.
 ```bash
 pip install -r requirements.txt
 ```
@@ -79,7 +80,6 @@ python examples/login.py --token YOUR_TOKEN --profile YOUR_PROFILE_ID
 ## Фичи
 TODO:
 - добавление коллекции с mdblist.com (сразу есть tmdb id)
-- плагин для лампы коллекции + избранное в одном месте
 
 
 Done:
@@ -95,6 +95,7 @@ Done:
 - ✅ Remove bookmarks
 - ✅ List bookmarks
 - ✅ TMDB proxy integration
+- ✅ плагин для лампы коллекции + избранное в одном месте
 
 
 ### 6. Python API
