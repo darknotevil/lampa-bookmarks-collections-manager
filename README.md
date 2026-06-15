@@ -12,8 +12,11 @@
 
 
 Рекомендуется использовать с плагином collections.js который переопределяет стандартное поведение коллекций.
+https://github.com/darknotevil/lampa-plugins-collection
+
+### Install
 ```bash
-pip install -r requirements.txt
+uv pip install -r requirements.txt
 ```
 ### 1. Login
 
