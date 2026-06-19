@@ -1,21 +1,23 @@
 # Tech stack — Lampa bookmarks manager
 
-Python 3.13 (per `.venv` / `__pycache__/*.cpython-313.pyc`). Pure-Python, no
-build step.
+Python ≥3.10 (dev `.venv` is 3.13). Packaged with **hatchling**; installable as
+the `lampa-cli` console script via `uv tool install`.
 
 ## Setup
 
 ```bash
-pip install -r requirements.txt
-# or, since skill.md uses uv:
-uv pip install -r requirements.txt
+uv tool install .            # install the lampa-cli command (or: uv tool install git+<repo>)
+# dev / run without installing:
+uv run lampa-cli --help
 ```
 
 First-time login (one of):
 
 ```bash
-python examples/login.py --code 123456                    # device code from https://cub.rip/add
-python examples/login.py --token TOKEN --profile PROFILE  # existing session
+lampa-cli auth login                                   # prompts for the 6-digit device code
+lampa-cli auth login --code 123456                     # device code from https://cub.rip/add
+lampa-cli auth login --token TOKEN --profile PROFILE   # existing session
+lampa-cli auth status                                  # who am I / is the token still valid?
 ```
 
 Account is persisted to `$XDG_STATE_HOME/lampa-bookmarks/account.json`
@@ -23,45 +25,54 @@ Account is persisted to `$XDG_STATE_HOME/lampa-bookmarks/account.json`
 
 ## Commands
 
-- `run` (interactive CLI):
-  ```bash
-  python examples/add_items.py --search "Title" [-i]
-  python examples/list_collections.py --category user
-  python examples/create_collection.py --name "My Movies"
-  ```
-- `run` (agent / JSON CLI — see `.agent/skills/add-to-lampa.md`):
-  ```bash
-  uv run examples/agent_tool.py search "Title YEAR"
-  uv run examples/agent_tool.py add --tmdb-id <ID> [--collection-id <CID>]
-  uv run examples/agent_tool.py bulk-add --input items.json
-  uv run examples/agent_tool.py list-collections
-  uv run examples/agent_tool.py create-collection --name "..."
-  uv run examples/agent_tool.py remove --tmdb-id <ID> --collection-id <CID>
-  ```
-- `build`: none (pure Python).
-- `test`: `python -m pytest tests/` _(test directory is referenced in README but
-  not yet present in the tree — add as the project grows)._
-- `lint`: none configured.
+`lampa-cli [--json] [--domain cub.rip] <group> <verb>`. Output is human-readable
+by default; the global `--json` flag switches every command to the structured
+JSON the agent workflow relies on (see `.agent/skills/add-to-lampa.md`).
+
+```bash
+# auth
+lampa-cli auth login|logout|status
+
+# collections
+lampa-cli collections list [--category user|new|top|week|month|big|all] [--page N]
+lampa-cli collections view --id <CID> [--page N]
+lampa-cli collections create --name "My Movies"        # idempotent by name
+lampa-cli collections like --id <CID> [--unlike]
+
+# items (movies/shows)
+lampa-cli items search "Title YEAR"                     # caches card data on disk
+lampa-cli items add --id <TMDB_ID> [--collection-id <CID>] [--type movie|tv]
+lampa-cli items remove --id <TMDB_ID> --collection-id <CID> [--type movie|tv]
+lampa-cli items bulk-add --input items.json [--collection-id <CID>] [--delay 0.3]
+
+# bookmarks (favorites)
+lampa-cli bookmarks list
+lampa-cli bookmarks add --id <TMDB_ID> [--type movie|tv]
+lampa-cli bookmarks remove --id <BOOKMARK_ID>           # bookmark id, not TMDB id
+```
+
+- `build`: `uv build` (hatchling). `test`: none yet (no `tests/` in tree).
+  `lint`: none configured.
 
 ## Dependencies
 
-Runtime (`requirements.txt`):
+Declared in `pyproject.toml` (`[project.dependencies]`):
 
-- `requests>=2.28.0` — HTTP client for cub.rip / apitmdb proxy.
-- `pydantic>=2.0.0` — response models, including the deliberately misspelled
+- `requests>=2.28` — HTTP client for cub.rip / apitmdb proxy.
+- `pydantic>=2.0` — response models, including the deliberately misspelled
   `secuses` field that mirrors the API.
-- `python-dotenv>=1.0.0` — `.env` loading for local config / secrets.
+- `typer>=0.12` — CLI framework (pulls in click + rich).
 
-No dev deps pinned.
+No dev deps pinned. (`python-dotenv` and `requirements.txt` were removed in the
+move to a packaged CLI.)
 
 ## Config / state / cache (XDG, app name `lampa-bookmarks`)
 
 | File | Default path | Override env | Purpose |
 |---|---|---|---|
 | `settings.json` | `~/.config/lampa-bookmarks/` | `XDG_CONFIG_HOME` | `{domain, protocol, timeout}` (cub.rip / https / 8000) |
-| `account.json` | `~/.local/state/lampa-bookmarks/` | `XDG_STATE_HOME` | Saved token + profile, 0600, auto-written by `login.py` |
-| `search_cache.json` | `~/.cache/lampa-bookmarks/` | `XDG_CACHE_HOME` | `tmdb_id -> card data`, written by `search`, consumed by `add`/`remove` |
+| `account.json` | `~/.local/state/lampa-bookmarks/` | `XDG_STATE_HOME` | Saved token + profile, 0600, auto-written by `auth login` |
+| `search_cache.json` | `~/.cache/lampa-bookmarks/` | `XDG_CACHE_HOME` | `tmdb_id -> card data`, written by `items search`, consumed by `items add`/`remove` |
 
-Paths are derived by `src/utils.py:_xdg()`; `src/search.py` imports `CACHE_DIR`
-from there. None of these files live in the repo — `config/` was retired
-during XDG migration.
+Paths are derived by `src/lampa_cli/utils.py:_xdg()`; `src/lampa_cli/search.py`
+imports `CACHE_DIR` from there. None of these files live in the repo.

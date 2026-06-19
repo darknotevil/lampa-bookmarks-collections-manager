@@ -7,19 +7,22 @@ description: adding movie to lampa
 
 ## Overview
 
-Use the `agent_tool.py` script to add movies/TV shows to Lampa bookmarks or
-collections. All commands output structured JSON — no interactive prompts.
+Use the installed `lampa-cli` command to add movies/TV shows to Lampa bookmarks
+or collections. Pass the global `--json` flag so every command outputs
+structured JSON with no interactive prompts.
 
-`search` caches the full data of every result on disk, so `add` only needs the
-TMDB id: it recovers the title, poster and media type from that cache itself.
-You never have to copy card data around.
+`items search` caches the full data of every result on disk, so `items add` only
+needs the TMDB id: it recovers the title, poster and media type from that cache
+itself. You never have to copy card data around.
 
-**Working directory:** `lampa-bookmarks-collections-manager`
+**Prerequisite:** an authenticated session (`lampa-cli auth login`). The session,
+config and search cache live in XDG dirs, so the command works from any
+directory.
 
-**Commands:** `search`, `add`, `remove`, `list-collections`,
-`create-collection`, `bulk-add`. For more than a handful of titles, prefer
-**`bulk-add`** (one pass, one JSON report) over looping `search`+`add` — see
-*Bulk Workflow* below.
+**Commands:** `items search`, `items add`, `items remove`, `collections list`,
+`collections create`, `items bulk-add`. For more than a handful of titles, prefer
+**`items bulk-add`** (one pass, one JSON report) over looping `search`+`add` —
+see *Bulk Workflow* below.
 
 ## Two-Step Workflow
 
@@ -28,7 +31,7 @@ You never have to copy card data around.
 Run a search to get TMDB ids for the movie/show:
 
 ```bash
-cd lampa-bookmarks-collections-manager && uv run examples/agent_tool.py search "Movie Title YEAR"
+lampa-cli --json items search "Movie Title YEAR"
 ```
 
 Example output:
@@ -49,20 +52,20 @@ Example output:
 
 **Titles like `"Русское / Original"`:** pass them as-is. The tool searches by the
 **original (latin) part** automatically — it matches TMDB far more reliably than
-the localized side. (`bulk-add` does this for every item too.)
+the localized side. (`items bulk-add` does this for every item too.)
 
 ### Step 2 — Add
 
 Add the selected item using only the TMDB id from `results[N]`:
 
 ```bash
-cd lampa-bookmarks-collections-manager && uv run examples/agent_tool.py add --tmdb-id <ID>
+lampa-cli --json items add --id <ID>
 ```
 
 To add to a specific collection instead of bookmarks:
 
 ```bash
-cd lampa-bookmarks-collections-manager && uv run examples/agent_tool.py add --tmdb-id <ID> --collection-id <COLLECTION_ID>
+lampa-cli --json items add --id <ID> --collection-id <COLLECTION_ID>
 ```
 
 The media type is taken from the cached search result. Pass `--type movie|tv`
@@ -79,7 +82,7 @@ only as a fallback when you add an id that did not come from a `search` run.
 If you need to find a collection id first:
 
 ```bash
-cd lampa-bookmarks-collections-manager && uv run examples/agent_tool.py list-collections
+lampa-cli --json collections list
 ```
 
 Example output:
@@ -98,7 +101,7 @@ Create (or reuse) a collection by name — **idempotent**, so it never makes a
 duplicate:
 
 ```bash
-cd lampa-bookmarks-collections-manager && uv run examples/agent_tool.py create-collection --name "My Movies"
+lampa-cli --json collections create --name "My Movies"
 ```
 
 Output: `{"id": "3051", "title": "My Movies", "created": true}`. If a collection
@@ -109,10 +112,10 @@ returned `id` as `--collection-id` when adding.
 ## Removing from a Collection
 
 Remove a movie/show from a specific collection by TMDB id. The media type comes
-from the search cache (run `search` first), or pass `--type` as a fallback.
+from the search cache (run `items search` first), or pass `--type` as a fallback.
 
 ```bash
-cd lampa-bookmarks-collections-manager && uv run examples/agent_tool.py remove --tmdb-id <ID> --collection-id <CID>
+lampa-cli --json items remove --id <ID> --collection-id <CID>
 ```
 
 **Output `status` field — removing is idempotent:**
@@ -121,9 +124,9 @@ cd lampa-bookmarks-collections-manager && uv run examples/agent_tool.py remove -
   **not an error** — do NOT retry or "diagnose" it.
 - `"error"` — a real failure (`success: false`, exit 1); `error` explains why.
 
-`--collection-id` is **required** — `remove` only removes from a collection (this
-is the `collections/remove-card` endpoint). Removing a plain bookmark/favorite is
-a different operation (`bookmarks/remove`) and is not exposed here.
+`--collection-id` is **required** — `items remove` only removes from a collection
+(this is the `collections/remove-card` endpoint). Removing a plain
+bookmark/favorite is a different operation (`lampa-cli bookmarks remove`).
 
 ### Classifying anime / cartoon / movie
 
@@ -136,7 +139,7 @@ When the source doesn't label the type, decide with:
 ## Bulk Workflow
 
 For many titles, write them to a JSON file once and add them in a **single pass**
-with `bulk-add`. This amortizes startup, dedups, year-matches, prefers the
+with `items bulk-add`. This amortizes startup, dedups, year-matches, prefers the
 original title, and returns one structured report — far better than looping
 `search`+`add` per title.
 
@@ -155,10 +158,10 @@ Per-item fields: `title` (required), `year`, `type` (`movie`|`tv`), `collection`
 
 ```bash
 # Per-item destinations (each item's "collection" name, else bookmarks)
-cd lampa-bookmarks-collections-manager && uv run examples/agent_tool.py bulk-add --input items.json
+lampa-cli --json items bulk-add --input items.json
 
 # Or force everything into one collection
-cd lampa-bookmarks-collections-manager && uv run examples/agent_tool.py bulk-add --input items.json --collection-id 3051
+lampa-cli --json items bulk-add --input items.json --collection-id 3051
 ```
 
 Output report:
@@ -178,23 +181,23 @@ Add "Сексуальная тварь 2000" to bookmarks:
 
 1. **Search:**
    ```bash
-   cd lampa-bookmarks-collections-manager && uv run examples/agent_tool.py search "Сексуальная тварь 2000"
+   lampa-cli --json items search "Сексуальная тварь 2000"
    ```
    From `results`, pick index 0: `{"id": "11826", "year": 2001, "media_type": "movie"}` (closest year match to 2000).
 
 2. **Add** (just the id from `results[0]`):
    ```bash
-   cd lampa-bookmarks-collections-manager && uv run examples/agent_tool.py add --tmdb-id 11826
+   lampa-cli --json items add --id 11826
    ```
 
 ## Important Rules
 
-- For **many titles, use `bulk-add`** with a JSON file — don't loop `search`+`add`
-- **Always** run `search` before a single `add` — `add` relies on the cache that `search` writes (`bulk-add` searches internally, so it needs no prior `search`)
+- For **many titles, use `items bulk-add`** with a JSON file — don't loop `search`+`add`
+- **Always** run `items search` before a single `items add` — `add` relies on the cache that `search` writes (`bulk-add` searches internally, so it needs no prior `search`)
 - **NEVER** invent or guess a TMDB id — use ONLY the `id` values from the `results` array
 - **Always** include the year in the search query when known (e.g. `"Фукусима 2020"`)
 - `status: "already_exists"` is **success** — never retry or re-diagnose a duplicate
-- `status: "not_found"` from `remove` is **success** (item wasn't there) — don't retry
-- Use `create-collection --name` (idempotent) to get a collection id
+- `status: "not_found"` from `items remove` is **success** (item wasn't there) — don't retry
+- Use `collections create --name` (idempotent) to get a collection id
 - If no collection is specified, add to bookmarks (omit `--collection-id`)
-- `remove` needs `--collection-id` and removes only from that collection
+- `items remove` needs `--collection-id` and removes only from that collection

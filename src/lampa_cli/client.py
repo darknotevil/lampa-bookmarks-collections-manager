@@ -5,6 +5,7 @@ Handles HTTP requests with authentication, collections management,
 and TMDB proxy operations.
 """
 
+import base64
 import json
 import requests
 from typing import Optional, Dict, Any, List
@@ -88,6 +89,27 @@ class LampaClient:
             if self.account.profile and self.account.profile.id:
                 headers['profile'] = self.account.profile.id
             self.session.headers.update(headers)
+
+    def _customer_id(self) -> Optional[str]:
+        """Return the CUB customer id used as ``cid`` for user collections.
+
+        The customer id is embedded in the token itself (the first dot-separated
+        segment is base64 of ``{"id": <customer id>}``). We prefer it because a
+        token-based login can store the *profile* id in ``account.id``, while
+        user collections are keyed by the customer id. Falls back to
+        ``account.id`` when the token can't be decoded.
+        """
+        if self.account and self.account.token:
+            try:
+                head = self.account.token.split('.', 1)[0]
+                head += '=' * (-len(head) % 4)  # restore base64 padding
+                payload = json.loads(base64.b64decode(head))
+                cid = payload.get('id')
+                if cid is not None:
+                    return str(cid)
+            except Exception:
+                pass
+        return self.account.id if self.account else None
 
     def _get_api_url(self, path: str) -> str:
         """Build full API URL."""
@@ -304,9 +326,9 @@ class LampaClient:
         if not self.is_authenticated():
             raise RuntimeError("Not authenticated. Call login_with_code() or login_with_token() first.")
         
-        # For user category, use cid parameter
+        # For user category, use cid parameter (the customer id, from the token)
         if category == "user" and self.account:
-            params = {'cid': self.account.id, 'page': page}
+            params = {'cid': self._customer_id(), 'page': page}
         else:
             params = {'category': category, 'page': page}
         
@@ -341,6 +363,72 @@ class LampaClient:
             results=[CollectionItem(**item) for item in response.get('results', [])],
             total_pages=response.get('total_pages', 15)
         )
+
+    def list_all_user_collections(self) -> List[Collection]:
+        """Enumerate every collection owned by the current account.
+
+        cub.rip has no server-side dump for collections (``collections/dump``
+        answers 404), so we page through ``collections/list?cid=<account id>``
+        until a page comes back empty. ``total_pages`` is null/unreliable for
+        the user listing, so the empty page is the only safe stop condition.
+        A page cap guards against an endpoint that ignores ``page``.
+        """
+        if not self.is_authenticated():
+            raise RuntimeError("Not authenticated.")
+
+        collections: List[Collection] = []
+        page = 1
+        while page <= 1000:
+            response = self.list_collections(category="user", page=page)
+            if not response.results:
+                break
+            collections.extend(response.results)
+            page += 1
+        return collections
+
+    # ``collections/view`` returns at most this many raw items per page (the
+    # filtering of unresolvable cards happens *after* this window, so a page can
+    # come back with fewer — or zero — resolved cards while later pages still
+    # hold items). Empirically fixed at 20.
+    VIEW_PAGE_SIZE = 20
+
+    def view_all_collection_items(
+        self,
+        collection_id: str,
+        items_count: Optional[int] = None,
+    ) -> List[CollectionItem]:
+        """Page through every item of a collection.
+
+        ``collections/view`` returns TMDB-resolved cards and silently drops
+        items it cannot resolve, so the returned count can be lower than the
+        collection's ``items_count`` (there is no raw item endpoint, so this is
+        the most complete backup the API allows).
+
+        Because the drop happens *per raw page*, an entire page can resolve to
+        zero cards while later pages still have items — so stopping at the first
+        empty page would truncate the backup. When ``items_count`` is known we
+        instead walk a fixed number of raw pages (``ceil(items_count / 20)``);
+        only without it do we fall back to stop-on-empty.
+        """
+        if not self.is_authenticated():
+            raise RuntimeError("Not authenticated.")
+
+        items: List[CollectionItem] = []
+
+        if items_count and items_count > 0:
+            pages = -(-items_count // self.VIEW_PAGE_SIZE)  # ceil division
+            for page in range(1, min(pages, 1000) + 1):
+                response = self.view_collection(collection_id, page=page)
+                items.extend(response.results)
+        else:
+            page = 1
+            while page <= 1000:
+                response = self.view_collection(collection_id, page=page)
+                if not response.results:
+                    break
+                items.extend(response.results)
+                page += 1
+        return items
 
     def like_collection(self, collection_id: str, like: bool = True) -> Dict[str, Any]:
         """
@@ -672,18 +760,25 @@ class LampaClient:
         except req.exceptions.RequestException as e:
             raise e
 
-        # Parse the text dump - each line is a JSON bookmark entry
+        # The dump endpoint may answer in two shapes:
+        #   * a single JSON object wrapping the list:
+        #       {"secuses": true, "bookmarks": [ {...}, ... ], "version": ...}
+        #   * one JSON bookmark per line (legacy)
+        # Normalise both to a flat list of bookmark dicts.
         bookmarks = []
         for line in text.strip().split('\n'):
             line = line.strip()
             if not line:
                 continue
             try:
-                bookmark_data = json.loads(line)
-                bookmarks.append(bookmark_data)
+                parsed = json.loads(line)
             except json.JSONDecodeError:
                 # Skip malformed lines
                 continue
+            if isinstance(parsed, dict) and isinstance(parsed.get('bookmarks'), list):
+                bookmarks.extend(parsed['bookmarks'])
+            else:
+                bookmarks.append(parsed)
 
         return bookmarks
 

@@ -2,10 +2,9 @@
 Shared search helpers for Lampa MX.
 
 This module is the single source of truth for searching titles and shaping
-the results. Both the interactive human CLI (``examples/add_items.py``) and
-the agent JSON CLI (``examples/agent_tool.py``) build on top of it, so the
-multi-source search, year matching and card-data shaping live in exactly
-one place.
+the results. The ``lampa-cli items`` subcommands (search/add/remove/bulk-add)
+build on top of it, so the multi-source search, year matching and card-data
+shaping live in exactly one place.
 
 It also keeps a tiny on-disk cache
 (``$XDG_CACHE_HOME/lampa-bookmarks/search_cache.json``) that maps a TMDB id to
@@ -197,9 +196,8 @@ def get_cached_card(tmdb_id: str) -> Optional[Dict[str, Any]]:
 # ============================================
 # High-level helpers (search-then-pick, idempotent add)
 #
-# Shared by the agent CLI (``examples/agent_tool.py``) and the bulk runner so
-# the "prefer the original title", year-matching and duplicate handling live in
-# exactly one place.
+# Shared by ``items add`` and ``items bulk-add`` so the "prefer the original
+# title", year-matching and duplicate handling live in exactly one place.
 # ============================================
 
 def clean_search_title(title: str) -> str:

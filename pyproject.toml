@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "lampa-cli"
+version = "0.1.0"
+description = "CLI + Python library for managing Lampa MX bookmarks and collections via the cub.rip API"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "requests>=2.28",
+    "pydantic>=2.0",
+    "typer>=0.12",
+]
+
+[project.scripts]
+lampa-cli = "lampa_cli.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lampa_cli"]

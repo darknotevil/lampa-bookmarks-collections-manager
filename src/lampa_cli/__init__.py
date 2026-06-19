@@ -1,5 +1,6 @@
 """
-Lampa Parser - Tool for managing Lampa MX Collections and Bookmarks via API.
+lampa-cli — library + CLI for managing Lampa MX collections and bookmarks
+via the cub.rip API.
 """
 
 from .client import LampaClient
